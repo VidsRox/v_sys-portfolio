@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Profile {
+  id        String   @id @default("main")
+  name      String   @default("Your Name")
+  tagline   String   @default("Available for work")
+  bio       String   @default("")
+  about     String   @default("")
+  skills    String   @default("")
+  github    String   @default("")
+  twitter   String   @default("")
+  linkedin  String   @default("")
+  email     String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  tags        String[] 
+  liveUrl     String   @default("")
+  githubUrl   String   @default("")
+  year        String   @default("")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  excerpt   String   @default("")
+  content   String
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+}
