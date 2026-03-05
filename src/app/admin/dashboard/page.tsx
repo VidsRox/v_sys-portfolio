@@ -237,7 +237,7 @@ export default function DashboardPage() {
                 <textarea rows={3} value={profile.bio} onChange={e => setProfile({ ...profile, bio: e.target.value })} placeholder="One-liner about you..." />
               </div>
               <div className="form-group">
-                <label>About Page — Long Bio</label>
+                <label>About Page - Long Bio</label>
                 <textarea style={{ minHeight: '160px' }} value={profile.about} onChange={e => setProfile({ ...profile, about: e.target.value })} placeholder={"Paragraph 1...\n\nParagraph 2..."} />
               </div>
               <div className="form-group">
