@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
+
+const TiptapEditor = lazy(() => import('@/components/TiptapEditor'))
 
 type Tab = 'profile' | 'projects' | 'blog'
 
@@ -46,6 +48,9 @@ export default function DashboardPage() {
   const [editingPost, setEditingPost] = useState<Post | null>(null)
   const [blogForm, setBlogForm] = useState(EMPTY_POST)
 
+  // Blog editor mode: 'rich' (Tiptap) or 'markdown' (textarea)
+  const [editorMode, setEditorMode] = useState<'rich' | 'markdown'>('rich')
+
   const showToast = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(''), 3000)
@@ -61,7 +66,6 @@ export default function DashboardPage() {
     const res = await fetch('/api/admin/profile')
     if (res.ok) {
       const data = await res.json()
-      // Merge with EMPTY_PROFILE so no field is ever null/undefined
       setProfile({ ...EMPTY_PROFILE, ...data })
     }
   }, [])
@@ -90,10 +94,11 @@ export default function DashboardPage() {
 
   // ── PROFILE ──
   async function saveProfile() {
+    const payload = { ...profile, email: profile.email.trim() }
     const res = await fetch('/api/admin/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(profile),
+      body: JSON.stringify(payload),
     })
     if (res.ok) showToast('Profile saved!')
     else showToast('Error saving profile.')
@@ -145,12 +150,16 @@ export default function DashboardPage() {
   function openNewPost() {
     setEditingPost(null)
     setBlogForm(EMPTY_POST)
+    setEditorMode('rich')
     setShowBlogForm(true)
   }
 
   function openEditPost(p: Post) {
     setEditingPost(p)
     setBlogForm({ title: p.title, excerpt: p.excerpt, content: p.content, published: p.published })
+    // If content looks like markdown (no HTML tags at start), default to markdown mode
+    const isLikelyMarkdown = !p.content.trim().startsWith('<')
+    setEditorMode(isLikelyMarkdown && p.content.includes('#') ? 'markdown' : 'rich')
     setShowBlogForm(true)
   }
 
@@ -388,10 +397,50 @@ export default function DashboardPage() {
                 <button className="btn btn-primary" onClick={openNewPost}>+ Write Post</button>
               </>
             ) : (
-              <div style={{ maxWidth: '700px' }}>
-                <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: '22px', marginBottom: '28px', color: 'var(--text)' }}>
-                  {editingPost ? 'Edit Post' : 'New Post'}
+              <div style={{ maxWidth: '800px' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  marginBottom: '28px',
+                }}>
+                  <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: '22px', color: 'var(--text)' }}>
+                    {editingPost ? 'Edit Post' : 'New Post'}
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      onClick={() => setEditorMode('rich')}
+                      style={{
+                        background: editorMode === 'rich' ? 'rgba(200,245,66,.1)' : 'transparent',
+                        border: `1px solid ${editorMode === 'rich' ? 'var(--accent)' : 'var(--border)'}`,
+                        color: editorMode === 'rich' ? 'var(--accent)' : 'var(--muted)',
+                        padding: '4px 12px',
+                        borderRadius: 'var(--radius)',
+                        fontSize: '11px',
+                        letterSpacing: '.08em',
+                        cursor: 'pointer',
+                        fontFamily: "'DM Mono', monospace",
+                      }}
+                    >
+                      Rich Editor
+                    </button>
+                    <button
+                      onClick={() => setEditorMode('markdown')}
+                      style={{
+                        background: editorMode === 'markdown' ? 'rgba(200,245,66,.1)' : 'transparent',
+                        border: `1px solid ${editorMode === 'markdown' ? 'var(--accent)' : 'var(--border)'}`,
+                        color: editorMode === 'markdown' ? 'var(--accent)' : 'var(--muted)',
+                        padding: '4px 12px',
+                        borderRadius: 'var(--radius)',
+                        fontSize: '11px',
+                        letterSpacing: '.08em',
+                        cursor: 'pointer',
+                        fontFamily: "'DM Mono', monospace",
+                      }}
+                    >
+                      Markdown
+                    </button>
+                  </div>
                 </div>
+
                 <div className="form-group">
                   <label>Title</label>
                   <input type="text" value={blogForm.title} onChange={e => setBlogForm({ ...blogForm, title: e.target.value })} placeholder="Your post title..." />
@@ -402,7 +451,34 @@ export default function DashboardPage() {
                 </div>
                 <div className="form-group">
                   <label>Content</label>
-                  <textarea style={{ minHeight: '280px' }} value={blogForm.content} onChange={e => setBlogForm({ ...blogForm, content: e.target.value })} placeholder={"Write your post here.\n\nSeparate paragraphs with a blank line."} />
+                  {editorMode === 'rich' ? (
+                    <Suspense fallback={
+                      <div style={{
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius)',
+                        padding: '40px',
+                        textAlign: 'center',
+                        color: 'var(--muted)',
+                        fontSize: '12px',
+                      }}>
+                        Loading editor...
+                      </div>
+                    }>
+                      <TiptapEditor
+                        key={editingPost?.id ?? 'new'}
+                        content={blogForm.content}
+                        onChange={(html) => setBlogForm(prev => ({ ...prev, content: html }))}
+                        placeholder="Start writing your post..."
+                      />
+                    </Suspense>
+                  ) : (
+                    <textarea
+                      style={{ minHeight: '320px', fontFamily: "'DM Mono', monospace", fontSize: '13px' }}
+                      value={blogForm.content}
+                      onChange={e => setBlogForm({ ...blogForm, content: e.target.value })}
+                      placeholder={"Write in Markdown...\n\nUse ```mermaid code blocks for diagrams.\nImages: ![alt](url)"}
+                    />
+                  )}
                 </div>
                 <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <input

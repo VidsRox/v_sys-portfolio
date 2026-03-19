@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import MarkdownRenderer from '@/components/MarkdownRenderer'
+import BlogRenderer from '@/components/BlogRenderer'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,7 +49,7 @@ export default async function PostPage({ params }: { params: { slug: string } })
           </div>
         </header>
 
-        <MarkdownRenderer content={post.content} />
+        <BlogRenderer content={post.content} />
       </article>
     </main>
   )

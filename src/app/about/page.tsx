@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import SocialLink from '@/components/SocialLink'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'About' }
@@ -12,7 +13,15 @@ export default async function AboutPage() {
     profile?.github && { label: 'GitHub', url: profile.github },
     profile?.twitter && { label: 'Twitter', url: profile.twitter },
     profile?.linkedin && { label: 'LinkedIn', url: profile.linkedin },
-    profile?.email && { label: 'Email', url: `mailto:${profile.email}` },
+    profile?.email && {
+      label: 'Email',
+      url: (() => {
+        const raw = profile.email.trim()
+        return raw.startsWith('mailto:')
+          ? raw
+          : `mailto:${encodeURIComponent(raw)}`
+      })(),
+    },
   ].filter(Boolean) as { label: string; url: string }[]
 
   return (
@@ -33,14 +42,7 @@ export default async function AboutPage() {
           {socials.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '32px' }}>
               {socials.map(s => (
-                <a key={s.label} href={s.url} target="_blank" rel="noreferrer" style={{
-                  fontSize: '12px', letterSpacing: '.08em', textTransform: 'uppercase',
-                  color: 'var(--muted)', border: '1px solid var(--border)',
-                  padding: '8px 16px', borderRadius: 'var(--radius)',
-                  transition: 'all .2s',
-                }}>
-                  {s.label} →
-                </a>
+                <SocialLink key={s.label} label={s.label} url={s.url} />
               ))}
             </div>
           )}
