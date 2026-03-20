@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 interface SocialLinkProps {
   label: string
@@ -10,9 +10,8 @@ interface SocialLinkProps {
 export default function SocialLink({ label, url }: SocialLinkProps) {
   const isMail = url.startsWith('mailto:')
   const anchorRef = useRef<HTMLAnchorElement>(null)
+  const [copied, setCopied] = useState(false)
 
-  // apply target/rel attributes after mount to avoid mismatches between
-  // server-rendered HTML and client; mailto links are left untouched.
   useEffect(() => {
     if (!isMail && anchorRef.current) {
       anchorRef.current.setAttribute('target', '_blank')
@@ -22,9 +21,12 @@ export default function SocialLink({ label, url }: SocialLinkProps) {
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (isMail) {
-      // fallback navigation for mail links; prevents blank-tab issue
       e.preventDefault()
-      window.location.href = url
+      const email = decodeURIComponent(url.replace('mailto:', ''))
+      navigator.clipboard.writeText(email).then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
     }
   }
 
@@ -37,14 +39,15 @@ export default function SocialLink({ label, url }: SocialLinkProps) {
         fontSize: '12px',
         letterSpacing: '.08em',
         textTransform: 'uppercase',
-        color: 'var(--muted)',
-        border: '1px solid var(--border)',
+        color: copied ? 'var(--accent)' : 'var(--muted)',
+        border: `1px solid ${copied ? 'var(--accent)' : 'var(--border)'}`,
         padding: '8px 16px',
         borderRadius: 'var(--radius)',
         transition: 'all .2s',
+        cursor: 'pointer',
       }}
     >
-      {label} →
+      {copied ? 'Copied!' : `${label} →`}
     </a>
   )
 }
